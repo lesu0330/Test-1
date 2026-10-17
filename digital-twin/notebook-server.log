@@ -1,0 +1,20 @@
+
+  Another vinext dev server is already running.
+  
+  - Local:        http://127.0.0.1:4173
+  - PID:          18956
+  - Dir:          c:\Users\lesu0\Desktop\Test\digital-twin
+  
+  You can access the existing server at http://127.0.0.1:4173,
+  or run `taskkill /PID 18956 /F` to stop it and start a new one.
+
+
+  Another vinext dev server is already running.
+  
+  - Local:        http://127.0.0.1:4173
+  - PID:          18956
+  - Dir:          c:\Users\lesu0\Desktop\Test\digital-twin
+  
+  You can access the existing server at http://127.0.0.1:4173,
+  or run `taskkill /PID 18956 /F` to stop it and start a new one.
+

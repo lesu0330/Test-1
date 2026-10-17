@@ -44,6 +44,16 @@ Open `http://127.0.0.1:5173`. Installation is only required the first time; pres
 
 ### Read live simulation values from a notebook
 
+`Test(1).ipynb` and `Test(2).ipynb` contain the Evolus-controlled workflow: load the agent,
+start the app, connect to the dashboard, request patient/doctor/room pairings,
+apply them through the simulation validator, and step without baseline auto-assignment.
+Configure `EXECUTION_URL` and `execution_body` from the Evolus API docs first;
+the existing agent-definition GET endpoint does not execute an agent. Enter the
+API key through the notebook's hidden prompt or `EVOLUS_API_KEY` environment variable.
+Keep one dashboard tab open and avoid manual playback during notebook runs.
+Each run prints assignments and metrics and saves snapshots, decisions, final
+patient outcomes, and partial results to `simulation-results/` beside the notebook.
+
 The dashboard publishes its current structured operations snapshot to
 `/api/simulation-state`. Start the local app, open the dashboard, then run the
 `live-simulation-values` cell in `Test.ipynb`. The cell polls once per second
