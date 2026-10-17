@@ -50,11 +50,14 @@ is not a live-values polling or manually edited pairing notebook.
 
 1. Install the app dependencies as described above. Open `Test.ipynb` in Jupyter
    or VS Code with a Python 3 notebook kernel.
-2. Run its three code cells in order. The first finds or starts the local app
-   and opens the dashboard. Keep the dashboard tab open while the notebook runs;
-   it processes the notebook's queued simulation commands. Leave dashboard
-   playback paused and avoid manually stepping or resetting while the notebook
-   is controlling the run.
+2. Run its three code cells in order. In the first cell, enter your deployed
+   HTTPS Cloudflare Worker URL to connect to the hosted app, or leave it blank
+   to find or start the local app. It opens the dashboard; keep that tab open
+   while the notebook runs. Protect a hosted Worker with Cloudflare Access
+   because its API can control the simulation. Leave dashboard playback paused
+   and avoid manually stepping or resetting while the notebook is controlling
+   the run. For an Access-protected Worker, configure `CF_ACCESS_CLIENT_ID` and
+   `CF_ACCESS_CLIENT_SECRET` for the notebook kernel.
 3. The second cell resets the seeded scenario, asks Evolus for assignments,
    submits them through the simulation's assignment validator, and advances the
    simulation one minute at a time until completion. If the dashboard state
