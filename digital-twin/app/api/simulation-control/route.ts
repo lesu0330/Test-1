@@ -1,3 +1,5 @@
+import { simulationStateRequest } from "../../../lib/simulation-state";
+
 type AssignmentCommand = {
   id: string;
   action: "start" | "pause" | "step_agent" | "reset" | "assign_waiting" | "assign_selected";
@@ -9,20 +11,9 @@ type AssignmentCommand = {
   assignedCount?: number;
 };
 
-const commands: AssignmentCommand[] = [];
-
 export async function GET(request: Request) {
-  const commandId = new URL(request.url).searchParams.get("id");
-  if (commandId) {
-    const command = commands.find((item) => item.id === commandId);
-    if (!command) return Response.json({ error: "Unknown simulation command" }, { status: 404 });
-    return Response.json(command, { headers: { "Cache-Control": "no-store" } });
-  }
-
-  return Response.json(
-    { commands: commands.filter((command) => command.status === "pending") },
-    { headers: { "Cache-Control": "no-store" } },
-  );
+  const query = new URL(request.url).search;
+  return simulationStateRequest(`/commands${query}`);
 }
 
 export async function POST(request: Request) {
@@ -54,15 +45,16 @@ export async function POST(request: Request) {
     ) {
       return Response.json({ error: "Invalid command acknowledgement" }, { status: 400 });
     }
-    const command = commands.find((item) => item.id === input.commandId);
-    if (!command) return Response.json({ error: "Unknown simulation command" }, { status: 404 });
-    if (command.status !== "pending") {
-      return Response.json({ error: "Simulation command was already acknowledged" }, { status: 409 });
-    }
-    command.status = input.status;
-    command.message = input.message;
-    command.assignedCount = acknowledgedCount;
-    return Response.json(command);
+    return simulationStateRequest("/commands", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        commandId: input.commandId,
+        status: input.status,
+        message: input.message,
+        assignedCount: acknowledgedCount,
+      }),
+    });
   }
 
   if (
@@ -110,10 +102,6 @@ export async function POST(request: Request) {
     }
     pairings = parsedPairings;
   }
-  if (commands.filter((command) => command.status === "pending").length >= 20) {
-    return Response.json({ error: "Simulation command queue is full" }, { status: 429 });
-  }
-
   const command: AssignmentCommand = {
     id: crypto.randomUUID(),
     action: input.action as AssignmentCommand["action"],
@@ -122,7 +110,9 @@ export async function POST(request: Request) {
     pairings,
     status: "pending",
   };
-  commands.push(command);
-  if (commands.length > 100) commands.splice(0, commands.length - 100);
-  return Response.json(command, { status: 202 });
+  return simulationStateRequest("/commands", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(command),
+  });
 }

@@ -34,6 +34,10 @@ const localBindingConfig = {
         },
       ]
     : [],
+  durable_objects: {
+    bindings: [{ name: "SIMULATION_STATE", class_name: "SimulationState" }],
+  },
+  migrations: [{ tag: "v1", new_sqlite_classes: ["SimulationState"] }],
 };
 
 export default defineConfig(async ({ command }) => {
