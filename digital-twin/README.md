@@ -51,10 +51,16 @@ application → GitHub**, connect this repository and set:
 - **Root directory:** `digital-twin`
 - **Build command:** `npm run build`
 - **Deploy command:** `node ./node_modules/wrangler/bin/wrangler.js deploy --config dist/server/wrangler.json`
+- **Preview command:** `npx wrangler preview --config dist/server/wrangler.json`
 
 Use `site-creator-vinext-starter` as the Worker name to match the generated
 Wrangler configuration. The build declares and migrates the
-`SIMULATION_STATE` Durable Object automatically.
+`SIMULATION_STATE` Durable Object automatically. Wrangler 4.135.0 or later is
+required for Worker Previews; the project pins a compatible version. Set the
+Cloudflare **Preview command** to the command above. If this Worker was already
+connected to Builds, complete the one-time **Set up Worker Previews** switch
+under **Settings → Builds**; the legacy preview model requires a production
+Worker to exist before it can create a preview.
 
 ### Run the notebook against the deployed app
 
