@@ -42,6 +42,35 @@ npm run dev
 
 Open `http://127.0.0.1:5173`. Installation is only required the first time; press `Ctrl+C` to stop the server.
 
+### Deploy to Cloudflare Workers
+
+The app uses a Durable Object to share its live simulation snapshot and command
+queue between the dashboard and notebook. From **Workers & Pages → Create
+application → GitHub**, connect this repository and set:
+
+- **Root directory:** `digital-twin`
+- **Build command:** `npm run build`
+- **Deploy command:** `node ./node_modules/wrangler/bin/wrangler.js deploy --config dist/server/wrangler.json`
+
+Use `site-creator-vinext-starter` as the Worker name to match the generated
+Wrangler configuration. The build declares and migrates the
+`SIMULATION_STATE` Durable Object automatically.
+
+### Run the notebook against the deployed app
+
+Protect the Worker with Cloudflare Access before using it remotely; its API
+allows users to control the simulation. Open the repository-root `Test.ipynb`
+in Jupyter or VS Code with a Python 3 kernel. In the first code cell, enter the
+deployed HTTPS Worker URL when prompted; leave it blank to start the local app
+instead. Sign in to Access in the browser when the dashboard opens, and set
+`CF_ACCESS_CLIENT_ID` and `CF_ACCESS_CLIENT_SECRET` in the notebook environment
+for API requests. Keep the dashboard open while running the remaining cells.
+Set `EVOLUS_API_KEY` in the notebook environment or enter it at the hidden
+prompt.
+
+The notebook runs in your local Python kernel; Cloudflare deploys the web app
+and Durable Object, not a Jupyter kernel.
+
 ### Read live simulation values from a notebook
 
 `Test(1).ipynb` and `Test(2).ipynb` contain the Evolus-controlled workflow: load the agent,
