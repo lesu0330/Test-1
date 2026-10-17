@@ -1,7 +1,8 @@
 type AssignmentCommand = {
   id: string;
-  action: "start" | "assign_waiting" | "assign_selected";
+  action: "start" | "pause" | "step_agent" | "reset" | "assign_waiting" | "assign_selected";
   runId: string;
+  expectedStateVersion?: number;
   pairings?: Array<{ patientId: string; doctorId: string; roomId: string }>;
   status: "pending" | "applied" | "rejected";
   message?: string;
@@ -65,14 +66,19 @@ export async function POST(request: Request) {
   }
 
   if (
-    (input.action !== "start" && input.action !== "assign_waiting" && input.action !== "assign_selected") ||
+    (!["start", "pause", "step_agent", "reset", "assign_waiting", "assign_selected"].includes(String(input.action))) ||
     typeof input.runId !== "string" ||
     !input.runId
   ) {
     return Response.json({ error: "Invalid simulation command" }, { status: 400 });
   }
   let pairings: AssignmentCommand["pairings"];
+  let expectedStateVersion: number | undefined;
   if (input.action === "assign_selected") {
+    if (!Number.isInteger(input.expectedStateVersion) || (input.expectedStateVersion as number) < 0) {
+      return Response.json({ error: "Provide the snapshot state version for selected assignments" }, { status: 400 });
+    }
+    expectedStateVersion = input.expectedStateVersion as number;
     if (!Array.isArray(input.pairings) || input.pairings.length < 1 || input.pairings.length > 20) {
       return Response.json({ error: "Provide between 1 and 20 patient-doctor-room pairings" }, { status: 400 });
     }
@@ -110,8 +116,9 @@ export async function POST(request: Request) {
 
   const command: AssignmentCommand = {
     id: crypto.randomUUID(),
-    action: input.action,
+    action: input.action as AssignmentCommand["action"],
     runId: input.runId,
+    expectedStateVersion,
     pairings,
     status: "pending",
   };

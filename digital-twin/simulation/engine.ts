@@ -265,7 +265,7 @@ function assignPatients(state: SimulationState, requestedPairings?: PatientRoomP
     const correlationId = `CARE-${patient.id}-${state.simMinute}`;
     const resourceNames = patient.requiredResources.map((type) => state.resources.find((resource) => resource.type === type)!.label);
     addEvent(state, { type: "ASSIGNMENT_VALIDATED", category: "validation", level: "success", source: "Constraint validator", summary: `Assignment validated for ${patient.name}`, details: `${selectedRoom.label}, ${selectedDoctor.name}, and ${selectedNurse.name} are compatible.${resourceNames.length ? ` Allocated: ${resourceNames.join(", ")}.` : ""}${resolvedConflict ? ` Resolved conflict: ${resolvedConflict}.` : ""}`, entityIds: [patient.id, selectedRoom.id, selectedDoctor.id, selectedNurse.id, ...patient.requiredResources.map((type) => state.resources.find((resource) => resource.type === type)!.id)], correlationId });
-    addEvent(state, { type: "TREATMENT_STARTED", category: "patient", level: patient.severity <= 2 ? "notice" : "info", source: "Autonomous head-nurse policy", summary: `${patient.name} moved to ${selectedRoom.label}`, details: `${selectedDoctor.name} and ${selectedNurse.name} assigned after ${patient.waitMinutes} simulated minutes of waiting.`, entityIds: [patient.id, selectedRoom.id, selectedDoctor.id, selectedNurse.id], correlationId, before: { status: "waiting" }, after: { status: "treating", roomId: selectedRoom.id } });
+    addEvent(state, { type: "TREATMENT_STARTED", category: "patient", level: patient.severity <= 2 ? "notice" : "info", source: requestedPairings ? "Notebook-selected assignment" : "Autonomous head-nurse policy", summary: `${patient.name} moved to ${selectedRoom.label}`, details: `${selectedDoctor.name} and ${selectedNurse.name} assigned after ${patient.waitMinutes} simulated minutes of waiting.`, entityIds: [patient.id, selectedRoom.id, selectedDoctor.id, selectedNurse.id], correlationId, before: { status: "waiting" }, after: { status: "treating", roomId: selectedRoom.id } });
   }
 }
 
@@ -327,7 +327,7 @@ export function isSimulationComplete(state: SimulationState) {
   return state.patients.length > 0 && state.patients.every((patient) => patient.status === "discharged");
 }
 
-export function advanceSimulation(state: SimulationState): SimulationState {
+export function advanceSimulation(state: SimulationState, autoAssign = true): SimulationState {
   if (isSimulationComplete(state)) return state;
   const next = structuredClone(state);
   next.simMinute += 1; next.stateVersion += 1;
@@ -336,7 +336,7 @@ export function advanceSimulation(state: SimulationState): SimulationState {
   updateRooms(next);
   updateAmbulances(next);
   updateWaitingPatients(next);
-  assignPatients(next);
+  if (autoAssign) assignPatients(next);
   updateResourceStatuses(next);
   next.metrics = recalculateMetrics(next);
   if (next.simMinute % 5 === 0) addEvent(next, { type: "PRESSURE_SNAPSHOT", category: "simulation", level: next.metrics.activeConflicts || next.metrics.offlineResources ? "warning" : "info", source: "Metrics engine", summary: `Operational pressure snapshot at minute ${next.simMinute}`, details: `${next.metrics.waiting} waiting, ${next.metrics.inbound} inbound, ${next.metrics.activeConflicts} blocked assignments, ${next.metrics.critical} critical patients, and ${next.metrics.offlineResources} offline resources.`, entityIds: [] });

@@ -10,6 +10,7 @@ export type OpsSnapshot = {
   stateVersion: number;
   complete: boolean;
   metrics: SimulationState["metrics"];
+  patients: SimulationState["patients"];
   waiting: Array<{
     id: string;
     name: string;
@@ -36,7 +37,7 @@ export type OpsSnapshot = {
     severity: number;
     etaMinutes: number;
   }>;
-  rooms: Array<{ id: string; label: string; type: string; status: string; patientId?: string }>;
+  rooms: Array<{ id: string; label: string; type: string; status: string; patientId?: string; reservedForPatientId?: string }>;
   staff: Array<{
     id: string;
     name: string;
@@ -49,6 +50,7 @@ export type OpsSnapshot = {
   resources: Array<{
     id: string;
     label: string;
+    type: string;
     status: string;
     used: number;
     capacity: number;
@@ -69,6 +71,7 @@ export function buildOpsSnapshot(state: SimulationState): OpsSnapshot {
     stateVersion: state.stateVersion,
     complete: state.patients.length > 0 && state.patients.every((patient) => patient.status === "discharged"),
     metrics: state.metrics,
+    patients: state.patients,
     waiting: state.patients
       .filter((patient) => patient.status === "waiting")
       .sort((a, b) => a.severity - b.severity || b.waitMinutes - a.waitMinutes)
@@ -111,6 +114,7 @@ export function buildOpsSnapshot(state: SimulationState): OpsSnapshot {
       type: room.type,
       status: room.status,
       patientId: room.patientId,
+      reservedForPatientId: room.reservedForPatientId,
     })),
     staff: state.staff.map((member) => ({
       id: member.id,
@@ -124,6 +128,7 @@ export function buildOpsSnapshot(state: SimulationState): OpsSnapshot {
     resources: state.resources.map((resource) => ({
       id: resource.id,
       label: resource.label,
+      type: resource.type,
       status: resource.status,
       used: resource.assignedPatientIds.length,
       capacity: resource.capacity,

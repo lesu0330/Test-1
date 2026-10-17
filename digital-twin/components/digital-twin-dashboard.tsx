@@ -118,6 +118,7 @@ export default function DigitalTwinDashboard() {
             id: string;
             action: string;
             runId: string;
+            expectedStateVersion?: number;
             pairings?: Array<{ patientId: string; doctorId: string; roomId: string }>;
           }>;
         };
@@ -125,17 +126,36 @@ export default function DigitalTwinDashboard() {
           if (!active) return;
           const current = stateRef.current;
           if (
-            (command.action !== "start" && command.action !== "assign_waiting" && command.action !== "assign_selected") ||
+            (!["start", "pause", "step_agent", "reset", "assign_waiting", "assign_selected"].includes(command.action)) ||
             command.runId !== current.runId ||
+            (command.action === "assign_selected" && command.expectedStateVersion !== current.stateVersion) ||
             (command.action === "assign_selected" && !command.pairings?.length)
           ) {
-            const message = "The command does not match the active simulation run or has invalid pairings.";
+            const message = "The command does not match the active run and state version, or has invalid pairings.";
             const acknowledgement = await fetch("/api/simulation-control", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ commandId: command.id, status: "rejected", message }),
             });
             if (!acknowledgement.ok) throw new Error(`Simulation command acknowledgement failed (${acknowledgement.status})`);
+            continue;
+          }
+          if (["pause", "step_agent", "reset"].includes(command.action)) {
+            setRunning(false);
+            const next = command.action === "reset" ? initializeSimulation(current.seed)
+              : command.action === "step_agent" ? advanceSimulation(current, false) : current;
+            stateRef.current = next;
+            setState(next);
+            // Publish before acknowledgement so notebook decisions use the applied state.
+            const publication = await fetch("/api/simulation-state", {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(buildOpsSnapshot(next)),
+            });
+            if (!publication.ok) throw new Error("Could not publish controlled simulation state");
+            await fetch("/api/simulation-control", {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ commandId: command.id, status: "applied", message: `${command.action} applied` }),
+            });
             continue;
           }
           if (command.action === "start") {
@@ -164,6 +184,10 @@ export default function DigitalTwinDashboard() {
           const assignedCount = next.patients.filter((patient) => patient.status === "treating").length - current.patients.filter((patient) => patient.status === "treating").length;
           stateRef.current = next;
           setState(next);
+          await fetch("/api/simulation-state", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(buildOpsSnapshot(next)),
+          });
           const message = selected
             ? selected.results.map((result) => `${result.patientId}: ${result.message}`).join("\n")
             : assignedCount > 0
@@ -184,10 +208,15 @@ export default function DigitalTwinDashboard() {
     }
 
     const timer = window.setInterval(() => { void processCommands(); }, 500);
+    const processWhenVisible = () => {
+      if (document.visibilityState === "visible") void processCommands();
+    };
+    document.addEventListener("visibilitychange", processWhenVisible);
     void processCommands();
     return () => {
       active = false;
       window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", processWhenVisible);
     };
   }, []);
 
